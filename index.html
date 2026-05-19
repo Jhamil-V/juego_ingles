@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>English Fun Game</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: linear-gradient(to bottom, #87ceeb, #b9f6ca);
+      margin: 0;
+      padding: 20px;
+      text-align: center;
+    }
+
+    h1 {
+      color: purple;
+      font-size: 48px;
+    }
+
+    .tabs button {
+      margin: 10px;
+      padding: 15px 25px;
+      border: none;
+      border-radius: 15px;
+      font-size: 20px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    .memory-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      max-width: 700px;
+      margin: auto;
+    }
+
+    .card {
+      background: white;
+      border-radius: 15px;
+      height: 100px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 24px;
+      font-weight: bold;
+      cursor: pointer;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    }
+
+    .hidden {
+      background: #4fc3f7;
+      color: white;
+    }
+
+    .quiz-options button,
+    .listen-options button {
+      margin: 10px;
+      padding: 15px;
+      font-size: 22px;
+      border-radius: 15px;
+      border: none;
+      cursor: pointer;
+      background: #fff59d;
+    }
+
+    .drag-container {
+      display: flex;
+      justify-content: center;
+      gap: 40px;
+      flex-wrap: wrap;
+    }
+
+    .drag-item,
+    .drop-zone {
+      background: white;
+      margin: 10px;
+      padding: 15px;
+      border-radius: 15px;
+      font-size: 22px;
+      width: 180px;
+      cursor: grab;
+    }
+
+    .drop-zone {
+      background: #f8bbd0;
+    }
+
+    #message {
+      font-size: 28px;
+      font-weight: bold;
+      margin: 20px;
+      color: #e91e63;
+    }
+  </style>
+</head>
+<body>
+
+<h1>🌟 English Fun Game 🌟</h1>
+<h2 id="score">⭐ Puntaje: 0</h2>
+<div id="message"></div>
+
+<div class="tabs">
+  <button onclick="showGame('memory')">🧠 Memory</button>
+  <button onclick="showGame('quiz')">🎯 Quiz</button>
+  <button onclick="showGame('drag')">🧩 Drag & Drop</button>
+  <button onclick="showGame('listen')">🔊 Escucha</button>
+</div>
+
+<div id="memory" class="game"></div>
+<div id="quiz" class="game" style="display:none"></div>
+<div id="drag" class="game" style="display:none"></div>
+<div id="listen" class="game" style="display:none"></div>
+
+<script>
+const words = [
+  { en: 'Tall', es: 'Alto' },
+  { en: 'Short', es: 'Bajito' },
+  { en: 'Fat', es: 'Gordito' },
+  { en: 'Old', es: 'Viejito' },
+  { en: 'Thin', es: 'Delgado' },
+  { en: 'Pretty', es: 'Bonita' },
+  { en: 'Ugly', es: 'Feo' },
+  { en: 'Handsome', es: 'Guapo' },
+];
+
+let score = 0;
+let selected = [];
+let matched = [];
+let currentListen = '';
+
+function updateScore(points) {
+  score += points;
+  document.getElementById('score').innerText = '⭐ Puntaje: ' + score;
+}
+
+function message(text) {
+  document.getElementById('message').innerText = text;
+  setTimeout(() => {
+    document.getElementById('message').innerText = '';
+  }, 1500);
+}
+
+function showGame(id) {
+  document.querySelectorAll('.game').forEach(g => g.style.display = 'none');
+  document.getElementById(id).style.display = 'block';
+}
+
+function shuffle(arr) {
+  return arr.sort(() => Math.random() - 0.5);
+}
+
+// MEMORY
+const memoryCards = shuffle([
+  ...words.map(w => ({ text: w.en, pair: w.es })),
+  ...words.map(w => ({ text: w.es, pair: w.en }))
+]);
+
+const memoryDiv = document.getElementById('memory');
+memoryDiv.innerHTML = '<div class="memory-grid"></div>';
+const grid = memoryDiv.querySelector('.memory-grid');
+
+memoryCards.forEach((card, index) => {
+  const div = document.createElement('div');
+  div.className = 'card hidden';
+  div.innerText = '❓';
+
+  div.onclick = () => {
+    if (matched.includes(index) || selected.includes(index)) return;
+
+    div.innerText = card.text;
+    div.classList.remove('hidden');
+    selected.push(index);
+
+    if (selected.length === 2) {
+      const [a, b] = selected;
+
+      if (memoryCards[a].pair === memoryCards[b].text) {
+        matched.push(a, b);
+        updateScore(10);
+        message('🎉 ¡Correcto!');
+      } else {
+        setTimeout(() => {
+          document.querySelectorAll('.card')[a].innerText = '❓';
+          document.querySelectorAll('.card')[b].innerText = '❓';
+          document.querySelectorAll('.card')[a].classList.add('hidden');
+          document.querySelectorAll('.card')[b].classList.add('hidden');
+        }, 800);
+      }
+
+      selected = [];
+    }
+  };
+
+  grid.appendChild(div);
+});
+
+// QUIZ
+const quizDiv = document.getElementById('quiz');
+let q = 0;
+
+function loadQuiz() {
+  const word = words[q % words.length];
+  const options = shuffle([
+    word.es,
+    ...shuffle(words.filter(w => w.es !== word.es)).slice(0,3).map(w => w.es)
+  ]);
+
+  quizDiv.innerHTML = `
+    <h2>${word.en}</h2>
+    <div class="quiz-options">
+      ${options.map(opt => `<button onclick="checkQuiz('${opt}','${word.es}')">${opt}</button>`).join('')}
+    </div>
+  `;
+}
+
+function checkQuiz(selected, correct) {
+  if(selected === correct){
+    updateScore(5);
+    message('🎉 Muy bien');
+  } else {
+    message('❌ Incorrecto');
+  }
+  q++;
+  loadQuiz();
+}
+
+loadQuiz();
+
+// DRAG DROP
+const dragDiv = document.getElementById('drag');
+
+let dragHTML = '<div class="drag-container"><div>';
+words.forEach(w => {
+  dragHTML += `<div class="drag-item" draggable="true" ondragstart="drag(event)" id="${w.en}">${w.en}</div>`;
+});
+
+dragHTML += '</div><div>';
+
+shuffle([...words]).forEach(w => {
+  dragHTML += `<div class="drop-zone" ondrop="drop(event,'${w.en}')" ondragover="allowDrop(event)">${w.es}</div>`;
+});
+
+dragHTML += '</div></div>';
+dragDiv.innerHTML = dragHTML;
+
+function allowDrop(ev){ ev.preventDefault(); }
+
+function drag(ev){ ev.dataTransfer.setData('text', ev.target.id); }
+
+function drop(ev, correct){
+  ev.preventDefault();
+  const data = ev.dataTransfer.getData('text');
+
+  if(data === correct){
+    updateScore(5);
+    message('🎉 Correcto');
+  } else {
+    message('❌ No coincide');
+  }
+}
+
+// LISTEN
+const listenDiv = document.getElementById('listen');
+
+function loadListen(){
+  currentListen = words[Math.floor(Math.random()*words.length)].en;
+
+  listenDiv.innerHTML = `
+    <button onclick="speakWord()" style="padding:20px;font-size:28px;border-radius:20px;background:orange;border:none;cursor:pointer;">
+      🔊 ESCUCHAR
+    </button>
+    <div class="listen-options">
+      ${words.map(w => `<button onclick="checkListen('${w.en}')">${w.en}</button>`).join('')}
+    </div>
+  `;
+}
+
+function speakWord(){
+  const utter = new SpeechSynthesisUtterance(currentListen);
+  utter.lang = 'en-US';
+  speechSynthesis.speak(utter);
+}
+
+function checkListen(word){
+  if(word === currentListen){
+    updateScore(5);
+    message('🎉 Excelente');
+  } else {
+    message('❌ Intenta otra vez');
+  }
+  loadListen();
+}
+
+loadListen();
+</script>
+
+</body>
+</html>
